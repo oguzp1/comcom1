@@ -5,6 +5,7 @@
 
 from socket import *
 import threading
+import json
 
 questions = [
     {
@@ -59,19 +60,49 @@ questions = [
     }
 ]
 
+answers = [0, 0, 0, 0, 0]
 
 class ThreadedServer:
     def listenToClient(self, client, addr):
-        while True:
-            message = client.recv(1024)
-            if message == "exit":
-                print(addr, " is closed")
-                client.close()
-                exit(0)
-            else:
-                print(addr, " says: ", message.decode("utf-8"))
+        client.sendall('Please enter a username.')
+        user = client.recv(1024)
 
-    def __init__(self, serverPort):
+        results = self.resultsFile.readlines()
+        prevScores = ''.join(['{}. {}\n'.format(i, result.split(': ')[1])
+                              for i, result in enumerate(results)
+                              if result.startswith(user) and i < 5])
+
+        client.sendall('Hello, {}! Your previous results are as follows:\n{}'.format(user, prevScores))
+        mode = client.recv(1024)
+
+        if mode == 'exit':
+            client.close()
+            exit(0)
+        elif mode == 'begin':
+            score = 0
+            for i in range(len(questions)):
+                client.sendall(json.dumps(questions[i]))
+                answer = client.recv(1024)
+
+                if answer == answers[i]:
+                    score += 1
+                    client.sendall('Correct answer.')
+                else:
+                    client.sendall('Incorrect answer.')
+
+            client.sendall('Quiz complete. You scored {} / {}'.format(score, len(questions)))
+            client.close()
+
+            resultsFile.write('{}: {}'.format(user, score))
+
+            exit(0)
+        else:
+            client.close()
+            exit(1)
+
+    def __init__(self, resultsFile, serverPort):
+        self.resultsFile = resultsFile
+
         try:
             serverSocket = socket(AF_INET, SOCK_STREAM)
         except:
@@ -112,5 +143,6 @@ class ThreadedServer:
 
 if __name__ == "__main__":
     serverPort = 12000
-    ThreadedServer(serverPort)
+    with open('results.txt', 'a+') as resultsFile:
+        ThreadedServer(resultsFile, serverPort)
 
