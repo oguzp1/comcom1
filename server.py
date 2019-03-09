@@ -7,12 +7,9 @@ from socket import *
 import threading
 
 
-class ThreadedServer():
-
+class ThreadedServer:
     def listenToClient(self, client, addr):
-
         while True:
-
             message = client.recv(1024)
             if message == "exit":
                 print(addr, " is closed")
@@ -22,12 +19,9 @@ class ThreadedServer():
                 print(addr, " says: ", message.decode("utf-8"))
 
     def __init__(self, serverPort):
-
         try:
             serverSocket = socket(AF_INET, SOCK_STREAM)
-
         except:
-
             print("Socket cannot be created!!!")
             exit(1)
 
@@ -36,7 +30,6 @@ class ThreadedServer():
         try:
             serverSocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         except:
-
             print("Socket cannot be used!!!")
             exit(1)
 
@@ -45,7 +38,6 @@ class ThreadedServer():
         try:
             serverSocket.bind(('', serverPort))
         except:
-
             print("Binding cannot de done!!!")
             exit(1)
 
@@ -54,7 +46,6 @@ class ThreadedServer():
         try:
             serverSocket.listen(45)
         except:
-
             print("Server cannot listen!!!")
             exit(1)
 
