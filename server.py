@@ -6,6 +6,7 @@
 from socket import *
 import threading
 import json
+import os
 
 questions = [
     {
@@ -68,9 +69,8 @@ class ThreadedServer:
         user = client.recv(1024).decode()
 
         userScores = [score for score in self.scores if score.startswith(user)]
-        prevScores = ''.join(['{}. {} / {}\n'.format(i + 1, result.split(': ')[1], len(questions))
-                              for i, result in enumerate(userScores)
-                              if i < 5])
+        prevScores = ''.join(['{}) {}'.format(i + 1, result.split(': ', 1)[1])
+                                for i, result in zip(range(5), userScores)])
 
         client.sendall('Hello, {}! Your previous results are as follows:\n{}'.format(user, prevScores).encode())
         mode = client.recv(1024).decode()
@@ -80,12 +80,14 @@ class ThreadedServer:
             exit(0)
         elif mode == 'begin':
             score = 0
+            userAnswers = []
             client.sendall(str(len(questions)).encode())
             for i in range(len(questions)):
                 client.sendall(json.dumps(questions[i]).encode())
-                answer = client.recv(1024).decode()
+                answer = int(client.recv(1024).decode())
+                userAnswers.append(answer)
 
-                if int(answer) == answers[i]:
+                if answer == answers[i]:
                     score += 1
                     client.sendall('Correct answer.'.encode())
                 else:
@@ -94,7 +96,8 @@ class ThreadedServer:
             client.sendall('Quiz complete. You scored {} / {}'.format(score, len(questions)).encode())
             client.close()
 
-            self.scores.append('{}: {} / {}'.format(user, score, len(questions)))
+            answersString = ', '.join(['({}: {})'.format(i + 1, ans) for i, ans in enumerate(userAnswers)])
+            self.scores.insert(0, '{}: {} / {} [Answers: {}]\n'.format(user, score, len(questions), answersString))
             exit(0)
         else:
             client.close()
@@ -139,11 +142,9 @@ class ThreadedServer:
         while True:
             connectionSocket = None
             try:
-                serverSocket.settimeout(1)
+                serverSocket.settimeout(10)
                 connectionSocket, addr = serverSocket.accept()
-                t = threading.Thread(target=self.listenToClient, args=(connectionSocket, addr))
-                t.daemon = True
-                t.start()
+                threading.Thread(target=self.listenToClient, args=(connectionSocket, addr), daemon=True).start()
             except timeout:
                 continue
             except KeyboardInterrupt:
@@ -158,11 +159,17 @@ class ThreadedServer:
 
 if __name__ == '__main__':
     serverPort = 12000
-    with open('results.txt', 'w+') as resultsFile:
-        results = resultsFile.readlines()
-        server = ThreadedServer(results)
-        try:
-            server.startOnPort(serverPort)
-        except KeyboardInterrupt:
-            scores = server.get_scores()
-            resultsFile.writelines(scores)
+
+    if os.path.exists('results.txt'):
+        with open('results.txt', 'r') as readResultsFile:
+            results = readResultsFile.readlines()
+    else:
+        results = []
+
+    server = ThreadedServer(results)
+    try:
+        server.startOnPort(serverPort)
+    except KeyboardInterrupt:
+        scores = server.get_scores()
+        with open('results.txt', 'w') as writeResultsFile:
+            writeResultsFile.writelines(scores)
