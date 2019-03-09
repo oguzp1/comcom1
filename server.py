@@ -64,45 +64,46 @@ answers = [0, 0, 0, 0, 0]
 
 class ThreadedServer:
     def listenToClient(self, client, addr):
-        client.sendall('Please enter a username.')
-        user = client.recv(1024)
+        client.sendall('Please enter a username.'.encode())
+        user = client.recv(1024).decode()
 
-        results = self.resultsFile.readlines()
-        prevScores = ''.join(['{}. {}\n'.format(i, result.split(': ')[1])
-                              for i, result in enumerate(results)
-                              if result.startswith(user) and i < 5])
+        userScores = [score for score in self.scores if score.startswith(user)]
+        prevScores = ''.join(['{}. {} / {}\n'.format(i + 1, result.split(': ')[1], len(questions))
+                              for i, result in enumerate(userScores)
+                              if i < 5])
 
-        client.sendall('Hello, {}! Your previous results are as follows:\n{}'.format(user, prevScores))
-        mode = client.recv(1024)
+        client.sendall('Hello, {}! Your previous results are as follows:\n{}'.format(user, prevScores).encode())
+        mode = client.recv(1024).decode()
 
         if mode == 'exit':
             client.close()
             exit(0)
         elif mode == 'begin':
             score = 0
+            client.sendall(str(len(questions)).encode())
             for i in range(len(questions)):
-                client.sendall(json.dumps(questions[i]))
-                answer = client.recv(1024)
+                client.sendall(json.dumps(questions[i]).encode())
+                answer = client.recv(1024).decode()
 
-                if answer == answers[i]:
+                if int(answer) == answers[i]:
                     score += 1
-                    client.sendall('Correct answer.')
+                    client.sendall('Correct answer.'.encode())
                 else:
-                    client.sendall('Incorrect answer.')
+                    client.sendall('Incorrect answer.'.encode())
 
-            client.sendall('Quiz complete. You scored {} / {}'.format(score, len(questions)))
+            client.sendall('Quiz complete. You scored {} / {}'.format(score, len(questions)).encode())
             client.close()
 
-            resultsFile.write('{}: {}'.format(user, score))
-
+            self.scores.append('{}: {} / {}'.format(user, score, len(questions)))
             exit(0)
         else:
             client.close()
             exit(1)
 
-    def __init__(self, resultsFile, serverPort):
-        self.resultsFile = resultsFile
+    def __init__(self, scores):
+        self.scores = scores
 
+    def startOnPort(self, serverPort):
         try:
             serverSocket = socket(AF_INET, SOCK_STREAM)
         except:
@@ -136,13 +137,32 @@ class ThreadedServer:
         print("The server is ready to receive")
 
         while True:
-            connectionSocket, addr = serverSocket.accept()
+            connectionSocket = None
+            try:
+                serverSocket.settimeout(1)
+                connectionSocket, addr = serverSocket.accept()
+                t = threading.Thread(target=self.listenToClient, args=(connectionSocket, addr))
+                t.daemon = True
+                t.start()
+            except timeout:
+                continue
+            except KeyboardInterrupt:
+                if connectionSocket:
+                    connectionSocket.close()
+                serverSocket.close()
+                break
 
-            threading.Thread(target=self.listenToClient, args=(connectionSocket, addr)).start()
+    def get_scores(self):
+        return self.scores
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     serverPort = 12000
-    with open('results.txt', 'a+') as resultsFile:
-        ThreadedServer(resultsFile, serverPort)
-
+    with open('results.txt', 'w+') as resultsFile:
+        results = resultsFile.readlines()
+        server = ThreadedServer(results)
+        try:
+            server.startOnPort(serverPort)
+        except KeyboardInterrupt:
+            scores = server.get_scores()
+            resultsFile.writelines(scores)
