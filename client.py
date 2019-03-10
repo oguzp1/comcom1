@@ -1,7 +1,15 @@
-# CLIENT CODE
+"""
+    Authors:
+        Oguz Paksoy         - 150150111
+        Merve Elif Demirtas - 150160706
+    Date:
+        10.3.2019
+"""
+
 import sys
 import socket
-from PyQt5.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QVBoxLayout, QWidget, QGroupBox, QGridLayout, QLineEdit, qApp, QPushButton, QMessageBox, QButtonGroup, QRadioButton
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QGroupBox, QGridLayout, QLineEdit, \
+    QPushButton, QRadioButton
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt
 import json

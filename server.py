@@ -1,7 +1,10 @@
-# SERVER CODE
-
-# TCP socket, threaded server, example 2
-# this server receives a message from client and print it on screen, then wait for another connection requests as well as listen for connected clients
+"""
+    Authors:
+        Oguz Paksoy         - 150150111
+        Merve Elif Demirtas - 150160706
+    Date:
+        10.3.2019
+"""
 
 from socket import *
 import threading
