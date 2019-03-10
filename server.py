@@ -65,43 +65,53 @@ answers = [0, 0, 0, 0, 0]
 
 class ThreadedServer:
     def listenToClient(self, client, addr):
-        client.sendall('Please enter a username.'.encode())
-        user = client.recv(1024).decode()
+        try:
+            client.sendall('Please enter a username.'.encode())
+            user = client.recv(1024).decode()
 
-        userScores = [score for score in self.scores if score.startswith(user)]
-        prevScores = ''.join(['{}) {}'.format(i + 1, result.split(': ', 1)[1])
-                                for i, result in zip(range(5), userScores)])
+            userScores = [score for score in self.scores if score.startswith(user)]
+            prevScores = ''.join(['{}) {}'.format(i + 1, result.split(': ', 1)[1])
+                                    for i, result in zip(range(5), userScores)])
 
-        client.sendall('Hello, {}! Your previous results are as follows:\n{}'.format(user, prevScores).encode())
-        mode = client.recv(1024).decode()
+            client.sendall('Hello, {}! Your previous results are as follows:\n{}'.format(user, prevScores).encode())
+            mode = client.recv(1024).decode()
 
-        if mode == 'exit':
-            client.close()
-            exit(0)
-        elif mode == 'begin':
-            score = 0
-            userAnswers = []
-            client.sendall(str(len(questions)).encode())
-            for i in range(len(questions)):
-                client.sendall(json.dumps(questions[i]).encode())
-                answer = int(client.recv(1024).decode())
-                userAnswers.append(answer)
+            if mode == 'exit':
+                client.close()
+            elif mode == 'begin':
+                score = 0
+                userAnswers = []
 
-                if answer == answers[i]:
-                    score += 1
-                    client.sendall('Correct answer.'.encode())
-                else:
-                    client.sendall('Incorrect answer.'.encode())
+                client.sendall(str(len(questions)).encode())
 
-            client.sendall('Quiz complete. You scored {} / {}'.format(score, len(questions)).encode())
-            client.close()
+                if int(client.recv(1024).decode()) != len(questions):
+                    client.close()
+                    exit(1)
 
-            answersString = ', '.join(['({}: {})'.format(i + 1, ans) for i, ans in enumerate(userAnswers)])
-            self.scores.insert(0, '{}: {} / {} [Answers: {}]\n'.format(user, score, len(questions), answersString))
-            exit(0)
-        else:
-            client.close()
+                for i in range(len(questions)):
+                    client.sendall(json.dumps(questions[i]).encode())
+                    answer = int(client.recv(1024).decode())
+                    userAnswers.append(answer)
+
+                    if answer == answers[i]:
+                        score += 1
+                        client.sendall('Correct answer.'.encode())
+                    else:
+                        client.sendall('Incorrect answer.'.encode())
+
+                client.sendall('Quiz complete. You scored {} / {}'.format(score, len(questions)).encode())
+                client.close()
+
+                answersString = ', '.join(['({}: {})'.format(i + 1, ans) for i, ans in enumerate(userAnswers)])
+                self.scores.insert(0, '{}: {} / {} [Answers: {}]\n'.format(user, score, len(questions), answersString))
+            else:
+                client.close()
+                exit(1)
+        except:
+            print('Connection to {} was aborted before the quiz ended.'.format(addr))
             exit(1)
+
+        exit(0)
 
     def __init__(self, scores):
         self.scores = scores
@@ -153,7 +163,7 @@ class ThreadedServer:
                 serverSocket.close()
                 break
 
-    def get_scores(self):
+    def getScores(self):
         return self.scores
 
 
@@ -170,6 +180,6 @@ if __name__ == '__main__':
     try:
         server.startOnPort(serverPort)
     except KeyboardInterrupt:
-        scores = server.get_scores()
+        scores = server.getScores()
         with open('results.txt', 'w') as writeResultsFile:
             writeResultsFile.writelines(scores)

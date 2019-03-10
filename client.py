@@ -4,136 +4,184 @@ import socket
 from PyQt5.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QVBoxLayout, QWidget, QGroupBox, QGridLayout, QLineEdit, qApp, QPushButton, QMessageBox, QButtonGroup, QRadioButton
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt
-
+import json
 
 
 class App(QMainWindow):
-    def __init__(self):
+    def __init__(self, clientSocket):
         super(App, self).__init__()
         self.title = 'Quiz Application'
-        self.left = 10
-        self.top = 10
+        self.left = 100
+        self.top = 100
         self.width = 800
         self.height = 400
+        self.clientSocket = clientSocket
+        self.remainingQuestions = -1
 
         self.initUI()
 
-    def start(self):
-        self.layout.removeWidget(self.b2)
-        self.b2.deleteLater()
+    def tcpReceiveString(self):
+        try:
+            return self.clientSocket.recv(1024).decode()
+        except:
+            self.clientSocket.close()
+            self.close()
+            raise
 
-        self.layout.removeWidget(self.b3)
-        self.b3.deleteLater()
+    def tcpSendString(self, string):
+        try:
+            self.clientSocket.sendall(string.encode())
+        except:
+            self.clientSocket.close()
+            self.close()
+            raise
 
-        self.layout.removeWidget(self.ql)
-        self.ql.deleteLater()
+    def startPageSetup(self):
+        self.labelPrimary = QLabel()
+        self.labelPrimary.setAlignment(Qt.AlignCenter)
+        self.labelPrimary.setFixedWidth(500)
 
-        self.ql3 = QLabel("Question 1")
+        self.lineEdit = QLineEdit('')
+        self.lineEdit.setFixedWidth(500)
+        self.lineEdit.setFixedHeight(30)
 
-        self.layout.addWidget(self.ql3, 0, 1, Qt.AlignCenter)
+        self.buttonPrimary = QPushButton('Enter')
+        self.buttonPrimary.clicked.connect(self.enter)
 
-        vBox = QWidget()
-        vBox2 = QVBoxLayout()
+        self.layout.addWidget(self.labelPrimary, 0, 1, Qt.AlignBottom)
+        self.layout.addWidget(self.lineEdit, 1, 1, Qt.AlignCenter)
+        self.layout.addWidget(self.buttonPrimary, 2, 1, Qt.AlignTop)
 
-        radio1 = QRadioButton("answer 1")
-        radio2 = QRadioButton("answer 2")
-        radio3 = QRadioButton("answer 3")
-        radio4 = QRadioButton("answer 4")
+        self.labelPrimary.setText(self.tcpReceiveString())
 
-        vBox2.addWidget(radio1)
-        vBox2.addWidget(radio2)
-        vBox2.addWidget(radio3)
-        vBox2.addWidget(radio4)
+    def welcomePageSetup(self):
+        self.layout.removeWidget(self.lineEdit)
+        self.lineEdit.deleteLater()
 
-        vBox.setLayout(vBox2)
+        self.layout.removeWidget(self.buttonPrimary)
+        self.buttonPrimary.disconnect()
 
-        self.b4 = QPushButton("Check")
-        self.b4.setFixedHeight(30)
-        self.b4.setFixedWidth(300)
-        self.b4.clicked.connect(self.check)
+        self.buttonPrimary.setText("Let's Start!")
+        self.buttonPrimary.setFixedHeight(30)
+        self.buttonPrimary.setFixedWidth(500)
+        self.buttonPrimary.clicked.connect(self.startQuiz)
 
-        hBox = QWidget()
-        hBox2 = QHBoxLayout()
+        self.buttonSecondary = QPushButton('Exit')
+        self.buttonSecondary.setFixedHeight(30)
+        self.buttonSecondary.setFixedWidth(500)
+        self.buttonSecondary.clicked.connect(self.exitBeforeQuiz)
 
-        self.ql4 = QLabel("Result: ")
-        self.ql5 = QLabel("")
+        self.layout.addWidget(self.buttonPrimary, 2, 1, Qt.AlignBottom)
+        self.layout.addWidget(self.buttonSecondary, 3, 1, Qt.AlignTop)
 
-        hBox2.addWidget(self.ql4)
-        hBox2.addWidget(self.ql5)
+    def quizPageSetup(self):
+        self.layout.removeWidget(self.buttonPrimary)
+        self.buttonPrimary.disconnect()
 
-        hBox.setLayout(hBox2)
+        self.layout.removeWidget(self.buttonSecondary)
+        self.buttonSecondary.deleteLater()
 
-        self.layout.addWidget(vBox, 1, 1, Qt.AlignCenter)
-        self.layout.addWidget(self.b4, 2, 1, Qt.AlignCenter)
-        self.layout.addWidget(hBox, 3, 1, Qt.AlignCenter)
+        self.layout.removeWidget(self.labelPrimary)
 
+        self.vBox = QWidget()
+        vBoxLayout = QVBoxLayout()
 
-    def check(self):
-        self.b4.setText("Next")
-        self.b4.clicked.connect(self.next)
+        self.radios = [QRadioButton('answer') for _ in range(4)]
 
-        self.ql5.setText("True/False")
+        for i in range(4):
+            vBoxLayout.addWidget(self.radios[i], Qt.AlignCenter)
 
+        self.vBox.setLayout(vBoxLayout)
 
-    def next(self):
+        self.buttonPrimary.setText('Check')
+        self.buttonPrimary.setFixedWidth(300)
+        self.buttonPrimary.clicked.connect(self.checkQuestion)
 
-        self.ql3.setText("Question 2...")
-        self.b4.setText("Check")
-        self.b4.clicked.connect(self.check)
+        self.labelResult = QLabel('Result: ')
 
-        self.ql5.setText("")
+        self.layout.addWidget(self.labelPrimary, 0, 1, Qt.AlignCenter)
+        self.layout.addWidget(self.vBox, 1, 1, Qt.AlignCenter)
+        self.layout.addWidget(self.buttonPrimary, 2, 1, Qt.AlignCenter)
+        self.layout.addWidget(self.labelResult, 3, 1, Qt.AlignCenter)
 
+    def resultPageSetup(self):
+        self.layout.removeWidget(self.vBox)
+        self.vBox.deleteLater()
 
-    def exit(self):
-        pass
+        self.buttonPrimary.disconnect()
 
+        self.layout.removeWidget(self.labelResult)
+        self.labelResult.deleteLater()
+
+        self.buttonPrimary.setText('Exit')
+        self.buttonPrimary.setFixedWidth(300)
+        self.buttonPrimary.clicked.connect(self.exit)
 
     def enter(self):
-        self.layout.removeWidget(self.ql2)
-        self.ql2.deleteLater()
+        # send username
+        self.tcpSendString(self.lineEdit.text())
 
-        self.layout.removeWidget(self.b1)
-        self.b1.deleteLater()
+        # recv prev scores
+        self.labelPrimary.setText(self.tcpReceiveString())
 
-        self.ql.setText("Welcome, your previous score is ...")
+        self.welcomePageSetup()
 
-        self.b2 = QPushButton("Let's Start")
-        self.b2.setFixedHeight(30)
-        self.b2.setFixedWidth(300)
-        self.b2.clicked.connect(self.start)
+    def startQuiz(self):
+        # send begin code
+        self.tcpSendString('begin')
 
-        self.b3 = QPushButton('Exit')
-        self.b3.setFixedHeight(30)
-        self.b3.setFixedWidth(300)
-        self.b3.clicked.connect(self.exit)
+        # receive question count
+        self.remainingQuestions = int(self.tcpReceiveString())
 
-        self.layout.addWidget(self.b2, 2, 1, Qt.AlignBottom)
-        self.layout.addWidget(self.b3, 3, 1, Qt.AlignTop)
+        # send acknowledgement
+        self.tcpSendString(str(self.remainingQuestions))
 
+        self.quizPageSetup()
 
+        self.askQuestion()
 
-    def createGridLayout(self):
-        self.horizontalGroupBox = QGroupBox("Quiz Application")
+    def askQuestion(self):
+        if self.remainingQuestions > 0:
+            question = json.loads(self.tcpReceiveString())
 
-        self.layout = QGridLayout()
+            self.labelPrimary.setText('Question {}:\n{}'.format(question['id'], question['question']))
+            for i in range(4):
+                self.radios[i].setText(question['options'][i])
 
-        self.ql = QLabel('Hello, please enter your username!')
-        self.ql.setAlignment(Qt.AlignCenter)
-        self.ql.setFixedHeight(20)
-        self.ql.setFixedWidth(300)
+            self.labelResult.setText('Result: ')
+            self.buttonPrimary.setText('Check')
+            self.buttonPrimary.disconnect()
+            self.buttonPrimary.clicked.connect(self.checkQuestion)
+            self.remainingQuestions -= 1
+        else:
+            self.showResults()
 
-        self.ql2 = QLineEdit('')
-        self.ql2.setFixedWidth(300)
-        self.ql2.setFixedHeight(30)
+    def checkQuestion(self):
+        ans = next((i for i in range(4) if self.radios[i].isChecked()), -1)
 
-        self.b1 = QPushButton('Enter')
-        self.b1.clicked.connect(self.enter)
+        # send answer
+        self.tcpSendString(str(ans))
 
-        self.layout.addWidget(self.ql, 0, 1, Qt.AlignBottom)
-        self.layout.addWidget(self.ql2, 1, 1, Qt.AlignCenter)
-        self.layout.addWidget(self.b1, 2, 1, Qt.AlignTop)
+        self.buttonPrimary.setText('Next')
+        self.buttonPrimary.disconnect()
+        self.buttonPrimary.clicked.connect(self.askQuestion)
 
-        self.horizontalGroupBox.setLayout(self.layout)
+        # receive answer status
+        self.labelResult.setText('Result: ' + self.tcpReceiveString())
+
+    def showResults(self):
+        # receive final score
+        self.labelPrimary.setText(self.tcpReceiveString())
+
+        self.resultPageSetup()
+
+    def exit(self):
+        self.clientSocket.close()
+        self.close()
+
+    def exitBeforeQuiz(self):
+        self.tcpSendString('exit')
+        self.exit()
 
     def initUI(self):
         # Write GUI initialization code
@@ -144,43 +192,30 @@ class App(QMainWindow):
         wid = QWidget(self)
         self.setCentralWidget(wid)
 
-        self.createGridLayout()
+        self.horizontalGroupBox = QGroupBox('Quiz Application')
+        self.layout = QGridLayout()
+        self.horizontalGroupBox.setLayout(self.layout)
 
         windowLayout = QVBoxLayout()
         windowLayout.addWidget(self.horizontalGroupBox)
         wid.setLayout(windowLayout)
 
+        self.startPageSetup()
+
         self.show()
 
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    ex = App()
-    sys.exit(app.exec_())
-
-
-"""
-def client():
-    host = socket.gethostname()
+    host = '127.0.0.1'
     port = 12000
 
-    client_socket = socket.socket()
-    client_socket.connect((host, port))
+    clientSocket = socket.socket()
+    try:
+        clientSocket.connect((host, port))
+    except:
+        clientSocket.close()
+        exit(1)
 
-    message = input(" -> ")  # take input
-
-    while message.lower().strip() != 'bye':
-        client_socket.send(message.encode())  # send message
-        data = client_socket.recv(1024).decode()  # receive response
-
-        print('Received from server: ' + data)  # show in terminal
-
-        message = input(" -> ")  # again take input
-
-    client_socket.close()  # close the connection
-
-
-if __name__ == '__main__':
-    client()
-
-"""
+    app = QApplication(sys.argv)
+    ex = App(clientSocket)
+    sys.exit(app.exec_())
