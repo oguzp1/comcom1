@@ -66,6 +66,7 @@ questions = [
 
 answers = [0, 0, 0, 0, 0]
 
+
 class ThreadedServer:
     def listenToClient(self, client, addr):
         try:
@@ -74,9 +75,9 @@ class ThreadedServer:
 
             userScores = [score for score in self.scores if score.startswith(user)]
             prevScores = ''.join(['{}) {}'.format(i + 1, result.split(': ', 1)[1])
-                                    for i, result in zip(range(5), userScores)])
+                                  for i, result in zip(range(5), userScores)])
 
-            client.sendall('Hello, {}! Your previous results are as follows:\n{}'.format(user, prevScores).encode())
+            client.sendall('Hello, {}! Your previous results are as follows:\n\n{}'.format(user, prevScores).encode())
             mode = client.recv(1024).decode()
 
             if mode == 'exit':
@@ -105,7 +106,7 @@ class ThreadedServer:
                 client.sendall('Quiz complete. You scored {} / {}'.format(score, len(questions)).encode())
                 client.close()
 
-                answersString = ', '.join(['({}: {})'.format(i + 1, ans) for i, ans in enumerate(userAnswers)])
+                answersString = ', '.join(['({}: {:2d})'.format(i + 1, ans) for i, ans in enumerate(userAnswers)])
                 self.scores.insert(0, '{}: {} / {} [Answers: {}]\n'.format(user, score, len(questions), answersString))
             else:
                 client.close()
