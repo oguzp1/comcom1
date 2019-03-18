@@ -48,6 +48,7 @@ class App(QMainWindow):
         self.labelPrimary = QLabel()
         self.labelPrimary.setAlignment(Qt.AlignCenter)
         self.labelPrimary.setFixedWidth(500)
+        self.labelPrimary.setWordWrap(True)
 
         self.lineEdit = QLineEdit('')
         self.lineEdit.setFixedWidth(500)
