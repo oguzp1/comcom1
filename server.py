@@ -3,7 +3,7 @@
         Oguz Paksoy         - 150150111
         Merve Elif Demirtas - 150160706
     Date:
-        10.3.2019
+        18.3.2019
 """
 
 from socket import *
@@ -14,57 +14,57 @@ import os
 questions = [
     {
         'id': 1,
-        'question': 'Soru 1',
+        'question': 'Which one of the following can be classified as an access network?',
         'options': [
-            'A1',
-            'B1',
-            'C1',
-            'D1'
+            'A Web server',
+            'A personal computer which runs an application that connects to the Web',
+            'Residential Wi-Fi',
+            'End-point router of an international ISP connecting to a regional ISP'
         ]
     },
     {
         'id': 2,
-        'question': 'Soru 2',
+        'question': 'Which one is true for both Peer-to-Peer and Server-Client architectures?',
         'options': [
-            'A2',
-            'B2',
-            'C2',
-            'D2'
+            'A host with a static IP that transfers data is necessary for all clients',
+            'Clients may come and go, and can also change IPs',
+            'There always exists a mediator between two client end systems',
+            'Multiple clients can directly connect to each other'
         ]
     },
     {
         'id': 3,
-        'question': 'Soru 3',
+        'question': 'Which one of the following is an electronic mail protocol?',
         'options': [
-            'A3',
-            'B3',
-            'C3',
-            'D3'
+            'SMTP',
+            'HTTP',
+            'FTP',
+            'RFC'
         ]
     },
     {
         'id': 4,
-        'question': 'Soru 4',
+        'question': 'What is the main difference between UDP and TCP?',
         'options': [
-            'A4',
-            'B4',
-            'C4',
-            'D4'
+            'TCP is a faster and more reliable version of UDP',
+            'TCP is connection oriented, UDP is connectionless',
+            'UDP is a faster and more reliable version of TCP',
+            'UDP is connection oriented, TCP is connectionless'
         ]
     },
     {
         'id': 5,
-        'question': 'Soru 5',
+        'question': 'Which one of the following fields is not present on both TCP and UDP datagrams?',
         'options': [
-            'A5',
-            'B5',
-            'C5',
-            'D5'
+            "Sender's Port Number",
+            "Receiver's Port Number",
+            'Checksum',
+            'Acknowledgement Number'
         ]
     }
 ]
 
-answers = [0, 0, 0, 0, 0]
+answers = [2, 1, 0, 1, 3]
 
 
 class ThreadedServer:
